@@ -2,6 +2,6 @@
     "terminal.integrated.env.windows": {
         "ELECTRON_MIRROR": "http://npm.taobao.org/mirrors/electron/",
         "HTTP_PROXY": "http://127.0.0.1:1080",
-        "HTTPS_PROXY": "https://127.0.0.1:1080",
+        "HTTPS_PROXY": "http://127.0.0.1:1080",
     }
 }

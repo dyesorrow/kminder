@@ -43,7 +43,6 @@
     <script>
         Kminder.onload((path) => {
             let save = localStorage.getItem("kminder");
-            console.log(save);
             if (save) {
                 Kminder.load("kminder", save);
             }

@@ -133,8 +133,6 @@ function addEditFeature(km) {
         inputBox.update();
     });
     km.on("dblclick", (e) => {
-        console.log(e.kityEvent.targetShape.constructor.name);
-        console.log(e.kityEvent.targetShape);
         if (e.kityEvent.targetShape.constructor.name == "Text" || e.kityEvent.targetShape.constructor.name == "Rect") {
             let selectNodes = km.getSelectedNodes();
             if (selectNodes.length > 0) {
@@ -325,12 +323,10 @@ function fontPicker(fonts) {
 
     document.addEventListener("click", (e) => {
         if (e.target == div) {
-            console.log("this div", div);
             return;
         }
         for (const it of joinElements) {
             if (it == e.target) {
-                console.log("this div", it);
                 return;
             }
         }
@@ -770,24 +766,24 @@ function addToolbarFeature(km) {
                     }
                 },
             },
-            "note": {
-                class: "kity-minder-icon-备注",
-                tips: "备注",
-                inited(it) {
-                }
-            },
-            "link": {
-                class: "kity-minder-icon-插入链接",
-                tips: "插入链接",
-                inited(it) {
-                }
-            },
-            "spilt": {
-                class: "kity-minder-icon-分割线",
-                tips: "分割线",
-                inited(it) {
-                }
-            },
+            // "note": {
+            //     class: "kity-minder-icon-备注",
+            //     tips: "备注",
+            //     inited(it) {
+            //     }
+            // },
+            // "link": {
+            //     class: "kity-minder-icon-插入链接",
+            //     tips: "插入链接",
+            //     inited(it) {
+            //     }
+            // },
+            // "spilt": {
+            //     class: "kity-minder-icon-分割线",
+            //     tips: "分割线",
+            //     inited(it) {
+            //     }
+            // },
             "stylecopy": {
                 class: "kity-minder-icon-复制样式",
                 tips: "复制样式",
@@ -975,7 +971,118 @@ function addRedoUndoFeature(km) {
 }
 
 
-function addBackgroundSelectorFeature(hotkey) {
+/**
+ * 添加文本复制创建节点，图片粘贴的特性
+ * @param {*} km 
+ * @returns 
+ */
+function addCopyPasteFeature(km) {
+    // 复制替换文本或者节点paste
+    window.addEventListener('paste', (e) => {
+        for (const it of e.clipboardData.items) {
+            if (it.kind == "file") {
+                if (it.type.startsWith("image/")) {
+                    let f = it.getAsFile();
+                    const reader = new FileReader();
+                    reader.onload = function (e) {
+                        km.execCommand("Image", reader.result, "");
+                    };
+                    reader.readAsDataURL(f);
+                } else {
+                    console.log("unkown file");
+                }
+            }
+            if (it.kind == "string") {
+                if (it.type == "text/plain") {
+                    let selectNodes = km.getSelectedNodes();
+                    if (selectNodes.length != 0) {
+                        it.getAsString((text) => {
+                            km.execCommand("AppendChildNode", text);
+                        });
+                    }
+                }
+                if (it.type == "this-minder") {
+                    km.execCommand("Paste");
+                }
+                else {
+                    it.getAsString((text) => {
+                        console.log(text);
+                    });
+                }
+            }
+        }
+    });
+
+    return {
+        cutCurNode() {
+            let selectNodes = km.getSelectedNodes();
+            if (selectNodes.length > 0) {
+                if (!inputBox.isShow()) {
+                    copyToClipboard("true", "this-minder");
+                    km.execCommand("Cut");
+                    return false;
+                }
+                return true;
+            }
+        },
+        copyCurNode() {
+            let selectNodes = km.getSelectedNodes();
+            if (selectNodes.length > 0) {
+                if (!inputBox.isShow()) {
+                    copyToClipboard("true", "this-minder");
+                    km.execCommand("Copy");
+                    return false;
+                }
+                return true;
+            }
+        }
+    };
+}
+
+
+/**
+ * 添加切换主题特性
+ * @param {*} km 
+ */
+function addThemeSelectorFeature(km) {
+    let themes = Object.keys(kityminder.Minder.getThemeList());
+    let themeAt = 0;
+    let thiz = {
+        use(theme) {
+            themeAt = 0;
+            for (const it of themes) {
+                if (it == theme) {
+                    break;
+                }
+                themeAt++;
+            }
+            km.execCommand("theme", theme);
+        },
+        next() {
+            if (themeAt >= themes.length) {
+                themeAt = 0;
+            }
+            km.execCommand("theme", themes[++themeAt]);
+        },
+        prev() {
+            if (themeAt == 0) {
+                themeAt = themes.length;
+            }
+            km.execCommand("theme", themes[--themeAt]);
+        },
+        current() {
+            return themes[themeAt];
+        }
+    };
+    return thiz;
+}
+
+
+/**
+ * 添加切换背景的特性
+ * @returns 
+ */
+function addBackgroundSelectorFeature() {
     let style = document.createElement("style");
     style.innerHTML += `
     .minder-view-svg-background-0 { 
@@ -1005,24 +1112,23 @@ function addBackgroundSelectorFeature(hotkey) {
             }
             bkgAt = at;
             minderSvg.setAttribute("class", `minder-view-svg-background-${at}`);
-            if(thiz.onchange){
+            if (thiz.onchange) {
                 thiz.onchange(bkgAt);
             }
         },
         current() {
             return bkgAt;
+        },
+        next() {
+            if (bkgAt >= 9) {
+                bkgAt = -1;
+            }
+            minderSvg.setAttribute("class", `minder-view-svg-background-${++bkgAt}`);
+            if (thiz.onchange) {
+                thiz.onchange(bkgAt);
+            }
         }
     };
-
-    hotkey.bind("切换下一个背景", 'b', 'ctrl').call((e) => {
-        if (bkgAt >= 9) {
-            bkgAt = -1;
-        }
-        minderSvg.setAttribute("class", `minder-view-svg-background-${++bkgAt}`);
-        if (thiz.onchange) {
-            thiz.onchange(bkgAt);
-        }
-    });
 
     return thiz;
 }

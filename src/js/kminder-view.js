@@ -12,43 +12,6 @@ var Kminder = function () {
     km.execCommand("theme", theme);
     km.execCommand('template', "right");
 
-    // 复制替换文本或者节点paste
-    window.addEventListener('paste', (e) => {
-        for (const it of e.clipboardData.items) {
-            console.log(it);
-            if (it.kind == "file") {
-                if (it.type.startsWith("image/")) {
-                    let f = it.getAsFile();
-                    const reader = new FileReader();
-                    reader.onload = function (e) {
-                        km.execCommand("Image", reader.result, "");
-                    };
-                    reader.readAsDataURL(f);
-                } else {
-                    console.log("unkown file");
-                }
-            }
-            if (it.kind == "string") {
-                if (it.type == "text/plain") {
-                    let selectNodes = km.getSelectedNodes();
-                    if (selectNodes.length != 0) {
-                        it.getAsString((text) => {
-                            km.execCommand("AppendChildNode", text);
-                        });
-                    }
-                }
-                if (it.type == "this-minder") {
-                    km.execCommand("Paste");
-                }
-                else {
-                    it.getAsString((text) => {
-                        console.log(text);
-                    });
-                }
-            }
-        }
-    });
-
     /**
      * 添加功能支持
      */
@@ -56,7 +19,10 @@ var Kminder = function () {
     let toolbar = addToolbarFeature(km);
     let history = addRedoUndoFeature(km);
     let hotkey = windowHotKey();
-    let background = addBackgroundSelectorFeature(hotkey);
+    let background = addBackgroundSelectorFeature();
+    let themeSelector = addThemeSelectorFeature(km);
+    let copyPaste = addCopyPasteFeature(km);
+
     background.use(9);
 
 
@@ -99,51 +65,20 @@ var Kminder = function () {
         history.redo();
     });
     hotkey.bind("剪切节点", 'x', 'ctrl').call((e) => {
-        let selectNodes = km.getSelectedNodes();
-        if (selectNodes.length > 0) {
-            if (!inputBox.isShow()) {
-                copyToClipboard("true", "this-minder");
-                km.execCommand("Cut");
-                return false;
-            }
-            return true;
-        }
+        return copyPaste.cutCurNode();
     });
     hotkey.bind("复制节点", 'c', 'ctrl').call((e) => {
-        let selectNodes = km.getSelectedNodes();
-        if (selectNodes.length > 0) {
-            if (!inputBox.isShow()) {
-                copyToClipboard("true", "this-minder");
-                km.execCommand("Copy");
-                return false;
-            }
-            return true;
-        }
+        return copyPaste.copyCurNode();
     });
-
-    let themes = Object.keys(kityminder.Minder.getThemeList());
-    let themeAt = 0;
-    for (const it of themes) {
-        if (it == theme) {
-            break;
-        }
-        themeAt++;
-    }
     hotkey.bind("切换下一个主题", 'q', 'ctrl').call((e) => {
-        if (themeAt >= themes.length) {
-            themeAt = 0;
-        }
-        km.execCommand("theme", themes[++themeAt]);
+        themeSelector.next();
     });
-
     hotkey.bind("切换上一个主题", 'Q', 'ctrl', 'shift').call((e) => {
-        if (themeAt == 0) {
-            themeAt = themes.length;
-        }
-        km.execCommand("theme", themes[--themeAt]);
+        themeSelector.prev();
     });
-
-
+    hotkey.bind("切换下一个背景", 'b', 'ctrl').call((e) => {
+        background.next();
+    });
 
     /**
      * 文件拖拽进来
@@ -180,7 +115,7 @@ var Kminder = function () {
             km.importJson(save.root);
             if (save.theme) {
                 theme = save.theme;
-                km.execCommand("theme", theme);
+                themeSelector.use(theme);
                 km.execCommand('template', "right");
             }
 
