@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <title>kminder</title>
+    <link rel="shortcut icon" href="./resources/icon.ico">
+    <meta name="viewport" content="initial-scale=1.0, user-scalable=no">
+    <link rel="stylesheet" href="./third/kityminder.css" rel="stylesheet">
+
+    <script type="text/javascript" src="./third/kity.min.js"></script>
+    <script type="text/javascript" src="./third/kityminder.core.min.js"></script>
+
+    <link rel="stylesheet" href="./font/fonts/kity-minder-icon.css">
+    <link rel="stylesheet" href="./third/ew-color-picker.min.css">
+    <script src="./third/ew-color-picker.min.js"></script>
+
+    <script src="./third/fast-json-patch.min.js"></script>
+</head>
+
+<body>
+    <style type="text/css">
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: rgb(252, 252, 252);
+        }
+
+        #minder-view {
+            position: fixed;
+            left: 0px;
+            top: 0px;
+            right: 0px;
+            bottom: 0px;
+            background-color: rgb(252, 252, 252);
+        }
+    </style>
+
+    <div id="minder-view"></div>
+
+    <script src="./js/util.js"></script>
+    <script src="./js/kminder-view.js"></script>
+
+    <script>
+        let IPC = function () {
+            let listen = {};
+            window.api.receive("fromMain", (data) => {
+                if (listen[data.func]) {
+                    listen[data.func](...data.params);
+                }
+            });
+            return {
+                send(func, ...params) {
+                    window.api.send("toMain", {
+                        func: func,
+                        params: params
+                    });
+                },
+                on(func, callback) {
+                    listen[func] = callback;
+                }
+            };
+        }();
+        IPC.on("save-file-success", (filepath) => {
+            Kminder.updateFilePath(filepath);
+        });
+        IPC.on("load-file-success", (data) => {
+            if (data) {
+                Kminder.load(data.filepath, data.content);
+            }
+        });
+
+
+        Kminder.onload((path) => {
+            IPC.send("load-file", path);
+        });
+        Kminder.onsave((path, content) => {
+            IPC.send("save-file", path, content);
+        });
+        Kminder.ready();
+    </script>
+</body>
+
+
+
+</html>

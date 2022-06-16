@@ -1,0 +1,35 @@
+{
+  "name": "kminder",
+  "version": "1.0.0",
+  "description": "脑图",
+  "author": {
+    "name": "dyesorrow",
+    "email": "dyesorrow@qq.com"
+  },
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder --win --x64"
+  },
+  "repository": "https://github.com/electron/electron-quick-start",
+  "keywords": [
+    "kminder"
+  ],
+  "devDependencies": {
+    "electron": "19.0.4",
+    "electron-builder": "23.0.3"
+  },
+  "build": {
+    "productName": "kminder",
+    "appId": "com.dyesorrow.kminder",
+    "directories": {
+      "output": "build"
+    },
+    "win": {
+      "target": [
+        "msi"
+      ],
+      "icon": "./src/resources/icon.png"
+    }
+  }
+}
