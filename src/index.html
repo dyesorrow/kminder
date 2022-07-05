@@ -44,16 +44,42 @@
     <script>
         let IPC = function () {
             let listen = {};
-            window.api.receive("fromMain", (data) => {
+            let seq = 1;
+            let callback = {};
+
+            window.api.receive("fromMain", async (data) => {
+                console.log("get", data);
+
+                // 响应
+                if (data.rsp) {
+                    callback[data.rsp](data.params);
+                    return;
+                }
+                // 调用
                 if (listen[data.func]) {
-                    listen[data.func](...data.params);
+                    let ret = await listen[data.func](...data.params);
+                    console.log("response: ", data.req, ret);
+                    if (data.req) {
+                        window.api.send("toMain", {
+                            rsp: data.req,
+                            params: ret
+                        });
+                    }
                 }
             });
+
             return {
                 send(func, ...params) {
-                    window.api.send("toMain", {
-                        func: func,
-                        params: params
+                    return new Promise((resolve, reject) => {
+                        let req = seq++;
+                        window.api.send("toMain", {
+                            func: func,
+                            req: req,
+                            params: params
+                        });
+                        callback[req] = (data) => {
+                            resolve(data);
+                        };
                     });
                 },
                 on(func, callback) {
@@ -61,22 +87,23 @@
                 }
             };
         }();
-        IPC.on("save-file-success", (filepath) => {
-            Kminder.updateFilePath(filepath);
+
+        IPC.on("will-close", async () => {
+            await Kminder.save();
         });
-        IPC.on("load-file-success", (data) => {
+
+        Kminder.onload(async (path) => {
+            let data = await IPC.send("load-file", path);
             if (data) {
-                Kminder.load(data.filepath, data.content);
+                await Kminder.load(data.filepath, data.content);
             }
         });
 
+        Kminder.onsave(async (path, content) => {
+            let data = await IPC.send("save-file", path, content);
+            Kminder.updateFilePath(data);
+        });
 
-        Kminder.onload((path) => {
-            IPC.send("load-file", path);
-        });
-        Kminder.onsave((path, content) => {
-            IPC.send("save-file", path, content);
-        });
         Kminder.ready();
     </script>
 </body>

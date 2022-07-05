@@ -3,5 +3,14 @@
         "ELECTRON_MIRROR": "http://npm.taobao.org/mirrors/electron/",
         "HTTP_PROXY": "http://127.0.0.1:1080",
         "HTTPS_PROXY": "http://127.0.0.1:1080",
+    },
+    "files.exclude": {
+        "**/.git": true,
+        "**/.svn": true,
+        "**/.hg": true,
+        "**/CVS": true,
+        "**/.DS_Store": true,
+        "**/Thumbs.db": true,
+        "build": true
     }
 }

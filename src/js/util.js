@@ -22,9 +22,10 @@ function addEditFeature(km) {
         word-break: break-all;
         overflow-y: hidden;
         outline: none;
-        border-radius: 2px;
+        border: none;
         line-height: 14px;
         resize: none;      
+        box-shadow: 2px 2px 10px 0px rgba(209, 210, 210, 0.718), -2px -2px 10px 0px rgba(209, 210, 210, 0.718);
     }
     `;
     document.body.appendChild(style);
@@ -44,7 +45,11 @@ function addEditFeature(km) {
     }
 
     let input = document.createElement("textarea");
+    input.setAttribute("spellcheck", "false");
     input.setAttribute("class", "kity-minder-inputer");
+    input.onpaste = (e) => {
+        e.stopPropagation();
+    };
     let selectNode = null;
     let inputBox = {
         show(selectedNode) {
@@ -53,8 +58,8 @@ function addEditFeature(km) {
                 selectNode = null;
             }
             selectNode = selectedNode;
-            inputBox.update();
             input.value = selectNode.getText();
+            inputBox.update();
             input.focus();
         },
         update() {
@@ -102,16 +107,27 @@ function addEditFeature(km) {
         }
     };
     input.onkeydown = e => {
+        console.log(e);
         if (e.key == "Enter" && e.shiftKey) {
             input.value = input.value + "\n";
             inputBox.update();
             e.preventDefault();
+            e.stopPropagation();
             return;
         }
-        if (e.key == "Enter") {
+        if (e.key == "Enter" || e.key == "Escape") {
             inputBox.hide();
             e.preventDefault();
+            e.stopPropagation();
             return;
+        }
+        let arrow = ["ArrowRight", "ArrowLeft", "ArrowDown", "ArrowUp"];
+        for (let i = 0; i < arrow.length; i++) {
+            const it = arrow[i];
+            if (it == e.key) {
+                e.stopPropagation();
+                return;
+            }
         }
     };
     input.oninput = (e) => {
@@ -141,8 +157,8 @@ function addEditFeature(km) {
                 inputBox.hide();
             }
         }
-
     });
+    km.inputBox = inputBox;
     return inputBox;
 }
 
@@ -176,6 +192,7 @@ function windowHotKey() {
     window.addEventListener("keydown", (e) => {
         for (const it of hotKeys) {
             let trigger = it.key[0] == e.key;
+            let keys = {};
             for (const key of it.key) {
                 if (key == "ctrl") {
                     trigger &= e.ctrlKey;
@@ -186,6 +203,16 @@ function windowHotKey() {
                 if (key == "shift") {
                     trigger &= e.shiftKey;
                 }
+                keys[key] = true;
+            }
+            if (e.ctrlKey && !keys['ctrl']) {
+                continue;
+            }
+            if (e.altKey && !keys['alt']) {
+                continue;
+            }
+            if (e.shiftKey && !keys['shift']) {
+                continue;
             }
             if (trigger) {
                 console.log("触发：", it.name);
@@ -194,6 +221,7 @@ function windowHotKey() {
                     continue;
                 }
                 e.preventDefault();
+                e.stopPropagation();
             }
         }
     });
@@ -513,6 +541,7 @@ function colorPicker() {
         hasClear: false,
         pickerAnimation: 'opacity',
         pickerAnimationTime: 0,
+        predefineColor: ['#000000', '#FFFFFF', '#C0C0C0', '#FF0000', '#FFD700', '#00FF00', '#40E0D0', '#4169E1', '#9370DB'],
         sure: function (color) {
             if (selectColor) {
                 selectColor(color);
@@ -606,10 +635,12 @@ function createToolbar(config) {
             animation-name: kity-minder-top-menu-pop-anim;
             animation-duration: 0.5s;
             z-index: 10;
+            pointer-events: none;
         }
 
         .kity-minder-top-menu-container {
             display: inline-block;
+            pointer-events: auto;
         }
 
         .kity-minder-top-menu {
@@ -1017,7 +1048,7 @@ function addCopyPasteFeature(km) {
         cutCurNode() {
             let selectNodes = km.getSelectedNodes();
             if (selectNodes.length > 0) {
-                if (!inputBox.isShow()) {
+                if (!km.inputBox.isShow()) {
                     copyToClipboard("true", "this-minder");
                     km.execCommand("Cut");
                     return false;
@@ -1028,7 +1059,7 @@ function addCopyPasteFeature(km) {
         copyCurNode() {
             let selectNodes = km.getSelectedNodes();
             if (selectNodes.length > 0) {
-                if (!inputBox.isShow()) {
+                if (!km.inputBox.isShow()) {
                     copyToClipboard("true", "this-minder");
                     km.execCommand("Copy");
                     return false;

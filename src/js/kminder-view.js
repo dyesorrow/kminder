@@ -2,6 +2,7 @@ var Kminder = function () {
     let filepath = null;
     let saveTodo = null;
     let loadTodo = null;
+    let haveSave = true;
 
     let minderView = document.getElementById("minder-view");
     const km = window.km = new kityminder.Minder({
@@ -23,16 +24,20 @@ var Kminder = function () {
     let themeSelector = addThemeSelectorFeature(km);
     let copyPaste = addCopyPasteFeature(km);
 
-    background.use(9);
+    background.use(0);
 
 
-    let saveData = () => {
+    let saveData = async () => {
+        if (haveSave) {
+            return;
+        }
         if (saveTodo) {
             let data = km.exportJson();
             data.background = background.current();
-            saveTodo(filepath, JSON.stringify(data));
+            await saveTodo(filepath, JSON.stringify(data));
         }
         document.title = "kminder - " + (filepath ? filepath : "");
+        haveSave = true;
     };
 
     /**
@@ -46,6 +51,72 @@ var Kminder = function () {
     hotkey.bind("删除节点", "Delete").call((e) => {
         km.execCommand('RemoveNode');
     });
+    hotkey.bind("编辑节点", "Enter").call((e) => {
+        let selectNodes = km.getSelectedNodes();
+        if (selectNodes.length > 0) {
+            inputBox.show(selectNodes[0]);
+        }
+    });
+    hotkey.bind("关注上一个节点", "ArrowUp").call((e) => {
+        let selectNodes = km.getSelectedNodes();
+        if (selectNodes.length > 0) {
+            let foucsNode = selectNodes[0];
+            if (foucsNode.parent) {
+                let len = foucsNode.parent.children.length;
+                for (let i = len - 1; i >= 0; i--) {
+                    const it = foucsNode.parent.children[i];
+                    if (it == foucsNode) {
+                        if (i - 1 >= 0) {
+                            let changeFoucsNode = foucsNode.parent.children[i - 1];
+                            km.select(changeFoucsNode, foucsNode);
+                        }
+                    }
+                }
+            }
+        }
+    });
+    hotkey.bind("关注下一个节点", "ArrowDown").call((e) => {
+        let selectNodes = km.getSelectedNodes();
+        if (selectNodes.length > 0) {
+            let foucsNode = selectNodes[0];
+            if (foucsNode.parent) {
+                let len = foucsNode.parent.children.length;
+                for (let i = 0; i < len; i++) {
+                    const it = foucsNode.parent.children[i];
+                    if (it == foucsNode) {
+                        if (i + 1 < len) {
+                            let changeFoucsNode = foucsNode.parent.children[i + 1];
+                            km.select(changeFoucsNode, foucsNode);
+                        }
+                    }
+                }
+            }
+        }
+    });
+
+    hotkey.bind("关注左一个节点", "ArrowLeft").call((e) => {
+        let selectNodes = km.getSelectedNodes();
+        if (selectNodes.length > 0) {
+            let foucsNode = selectNodes[0];
+            if (foucsNode.parent) {
+                km.select(foucsNode.parent, foucsNode);
+                // km.fire('selectionchange');
+            }
+        }
+    });
+
+    hotkey.bind("关注右一个节点", "ArrowRight").call((e) => {
+        let selectNodes = km.getSelectedNodes();
+        if (selectNodes.length > 0) {
+            let foucsNode = selectNodes[0];
+            if (foucsNode.children.length > 0) {
+                let len = foucsNode.children.length;
+                km.select(foucsNode.children[Math.floor(len / 2)], foucsNode);
+
+            }
+        }
+    });
+
     hotkey.bind("向上移动节点", "ArrowUp", 'alt').call((e) => {
         km.execCommand('ArrangeUp');
     });
@@ -102,13 +173,14 @@ var Kminder = function () {
 
     km.on("contentchange", (e) => {
         document.title = "kminder - " + (filepath ? filepath : "") + " - " + "未保存";
+        haveSave = false;
     });
 
     let thiz = {
-        load(path, text) {
+        async load(path, text) {
             if (filepath) {
                 // 保存旧内容
-                saveData();
+                await saveData();
             }
             filepath = path;
             let save = JSON.parse(text);
@@ -120,6 +192,8 @@ var Kminder = function () {
             }
 
             document.title = "kminder - " + path;
+            haveSave = true;
+
             if (save.background) {
                 background.use(save.background);
             } else {
@@ -129,12 +203,16 @@ var Kminder = function () {
         updateFilePath(path) {
             filepath = path;
         },
+        getSavePath() {
+            return filepath;
+        },
         onsave(todo) {
             saveTodo = todo;
         },
         onload(todo) {
             loadTodo = todo;
         },
+        save: saveData,
         ready() {
             if (loadTodo) {
                 loadTodo();
