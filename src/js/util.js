@@ -732,6 +732,7 @@ function createToolbar(config) {
     };
     for (const id in config.btns) {
         let it = config.btns[id];
+        it.rootConfig = config;
         let btn = document.createElement("div");
         let tips = document.createElement("div");
         tips.setAttribute("class", "tips");
@@ -815,157 +816,175 @@ function addToolbarFeature(km) {
                 inited(it) {
                 },
                 refresh(it) {
+                    
+                    it.click = (e) => {
+                        if (!it.dailog) {
+                            // 弹出窗口，然后输入链接
+                            let div = document.createElement("div");
+                            div.setAttribute("class", "input-dailog");
+                            div.innerHTML = `
+                                <style>
+                                    @keyframes input-dailog-pop-anim {
+                                        0% {
+                                            top: 10px;
+                                            opacity: 0.6;
+                                        }
+
+                                        100% {
+                                            top: calc(50% - 75px);
+                                            opacity: 1;
+                                        }
+                                    }
+                                    
+                                    .input-dailog {
+                                        position: fixed;
+                                        width: 400px;
+                                        height: 150px;
+                                        top: calc(50% - 75px);
+                                        left: calc(50% - 200px);
+                                        background-color: rgba(255, 255, 255);
+                                        border-radius: 8px;
+                                        box-shadow: 2px 2px 10px 0px rgba(209, 210, 210, 0.718), -2px -2px 10px 0px rgba(209, 210, 210, 0.718);
+                                        animation-name: input-dailog-pop-anim;
+                                        animation-duration: 0.5s;
+                                    }
+
+                                    .input-dailog-title {
+                                        height: 40px;
+                                        line-height: 40px;
+                                        padding-left: 20px;
+                                        padding-right: 20px;
+                                        font-size: 14px;
+                                        font-family: "微软雅黑";
+                                        border-bottom: 1px solid rgb(220, 217, 217);
+                                        user-select: none;
+                                    }
+
+                                    .input-dailog-input {
+                                        height: calc(100% - 80px);
+                                    }
+
+                                    .input-dailog-input textarea {
+                                        height: calc(100% - 10px);
+                                        width: calc(100% - 10px);
+                                        text-decoration: none;
+                                        border: none;
+                                        outline: none;
+                                        resize: none;
+                                        font-family: "微软雅黑";
+                                        padding: 5px;
+                                    }
+
+                                    .input-dailog-option {
+                                        width: 100%;
+                                        height: 40px;
+                                        display: flex;
+                                        justify-content: end;
+                                        align-items: center;
+                                        border-top: 1px solid rgb(220, 217, 217);
+                                    }
+
+                                    .input-dailog-btn {
+                                        display: inline-block;
+                                        height: 20px;
+                                        padding: 5px 20px;
+                                        font-size: 14px;
+                                        margin-right: 20px;
+                                        background-color: aliceblue;
+                                        border-radius: 5px;
+                                        user-select: none;
+                                        cursor: pointer;
+                                    }
+
+                                    .input-dailog-btn.cancel {
+                                        background-color: aliceblue;
+                                    }
+
+                                    .input-dailog-btn.cancel:hover {
+                                        background-color: rgb(192, 193, 193);
+                                    }
+
+                                    .input-dailog-btn.confirm {
+                                        background-color: rgb(123, 186, 241);
+                                    }
+
+                                    .input-dailog-btn.confirm:hover {
+                                        background-color: rgb(65, 153, 230);
+                                    }
+                                </style>
+
+                                <div class="input-dailog-title">
+                                输入链接
+                                </div>
+                                <div class="input-dailog-input">
+                                <textarea id="input-dailog-input-area"></textarea>
+                                </div>
+                                <div class="input-dailog-option">
+                                    <div id="input-dailog-btn-cancel" class="input-dailog-btn cancel">取消</div>
+                                    <div id="input-dailog-btn-confirm" class="input-dailog-btn confirm">确认</div>
+                                </div>
+                                `;
+                            it.dailog = div;
+                            it.dailog.show = (value, confirm) => {
+                                document.body.appendChild(div);
+                                let input = document.getElementById("input-dailog-input-area");
+                                input.onkeydown = (e)=>{
+                                    if(e.key == "Enter"){
+                                        confirm(input.value);
+                                        it.dailog.hide();
+                                        e.stopPropagation();
+                                    }
+                                }
+                                input.value = value || "";
+                                document.getElementById("input-dailog-btn-cancel").onclick = (e) => {
+                                    it.dailog.hide();
+                                };
+                                document.getElementById("input-dailog-btn-confirm").onclick = (e) => {
+                                    confirm(input.value);
+                                    it.dailog.hide();
+                                };
+                            };
+                            it.dailog.hide = () => {
+                                if (div.parentNode == document.body) {
+                                    document.body.removeChild(div);
+                                }
+                            };
+                        }
+
+                        let value = km.queryCommandValue('HyperLink');
+                        it.dailog.show(value.url, (input) => {
+                            if (!input.startsWith("http://") && !input.startsWith("https://")) {
+                                input = "https://" + input;
+                            }
+                            it.url = input;
+                            km.execCommand("HyperLink", input, "");
+
+                            let delBtn = it.rootConfig.btns["deletLink"];
+                            delBtn.style = "";
+                            delBtn.click = (e) => {
+                                km.execCommand("HyperLink", "", "");
+                            };
+                            delBtn.btn.refresh(delBtn);
+                        });
+                    };
+                }
+            },
+            "deletLink": {
+                class: "kity-minder-icon-取消链接",
+                tips: "删除链接",
+                inited(it) {
+                },
+                refresh(it) {
                     let value = km.queryCommandValue('HyperLink');
                     if (value && value.url) {
                         it.style = "";
-                        it.class = "kity-minder-icon-取消链接";
-                        it.tips = "删除链接";
                         it.click = (e) => {
                             km.execCommand("HyperLink", "", value.title);
                         };
                     } else {
-                        it.style = "";
-                        it.class = "kity-minder-icon-插入链接";
-                        it.tips = "插入链接";
-                        it.click = (e) => {
-                            if (!it.dailog) {
-                                // 弹出窗口，然后输入链接
-                                let div = document.createElement("div");
-                                div.setAttribute("class", "input-dailog");
-                                div.innerHTML = `
-                                    <style>
-                                        @keyframes input-dailog-pop-anim {
-                                            0% {
-                                                top: 10px;
-                                                opacity: 0.6;
-                                            }
-
-                                            100% {
-                                                top: calc(50% - 75px);
-                                                opacity: 1;
-                                            }
-                                        }
-                                        
-                                        .input-dailog {
-                                            position: fixed;
-                                            width: 400px;
-                                            height: 150px;
-                                            top: calc(50% - 75px);
-                                            left: calc(50% - 200px);
-                                            background-color: rgba(255, 255, 255);
-                                            border-radius: 8px;
-                                            box-shadow: 2px 2px 10px 0px rgba(209, 210, 210, 0.718), -2px -2px 10px 0px rgba(209, 210, 210, 0.718);
-                                            animation-name: input-dailog-pop-anim;
-                                            animation-duration: 0.5s;
-                                        }
-
-                                        .input-dailog-title {
-                                            height: 40px;
-                                            line-height: 40px;
-                                            padding-left: 20px;
-                                            padding-right: 20px;
-                                            font-size: 14px;
-                                            font-family: "微软雅黑";
-                                            border-bottom: 1px solid rgb(220, 217, 217);
-                                            user-select: none;
-                                        }
-
-                                        .input-dailog-input {
-                                            height: calc(100% - 80px);
-                                        }
-
-                                        .input-dailog-input textarea {
-                                            height: calc(100% - 10px);
-                                            width: calc(100% - 10px);
-                                            text-decoration: none;
-                                            border: none;
-                                            outline: none;
-                                            resize: none;
-                                            font-family: "微软雅黑";
-                                            padding: 5px;
-                                        }
-
-                                        .input-dailog-option {
-                                            width: 100%;
-                                            height: 40px;
-                                            display: flex;
-                                            justify-content: end;
-                                            align-items: center;
-                                            border-top: 1px solid rgb(220, 217, 217);
-                                        }
-
-                                        .input-dailog-btn {
-                                            display: inline-block;
-                                            height: 20px;
-                                            padding: 5px 20px;
-                                            font-size: 14px;
-                                            margin-right: 20px;
-                                            background-color: aliceblue;
-                                            border-radius: 5px;
-                                            user-select: none;
-                                            cursor: pointer;
-                                        }
-
-                                        .input-dailog-btn.cancel {
-                                            background-color: aliceblue;
-                                        }
-
-                                        .input-dailog-btn.cancel:hover {
-                                            background-color: rgb(192, 193, 193);
-                                        }
-
-                                        .input-dailog-btn.confirm {
-                                            background-color: rgb(123, 186, 241);
-                                        }
-
-                                        .input-dailog-btn.confirm:hover {
-                                            background-color: rgb(65, 153, 230);
-                                        }
-                                    </style>
-
-                                    <div class="input-dailog-title">
-                                    输入链接
-                                    </div>
-                                    <div class="input-dailog-input">
-                                    <textarea id="input-dailog-input-area"></textarea>
-                                    </div>
-                                    <div class="input-dailog-option">
-                                        <div id="input-dailog-btn-cancel" class="input-dailog-btn cancel">取消</div>
-                                        <div id="input-dailog-btn-confirm" class="input-dailog-btn confirm">确认</div>
-                                    </div>
-                                    `;
-                                it.dailog = div;
-                                it.dailog.show = (value, confirm) => {
-                                    document.body.appendChild(div);
-                                    let input = document.getElementById("input-dailog-input-area");
-                                    input.value = value || "";
-                                    document.getElementById("input-dailog-btn-cancel").onclick = (e) => {
-                                        it.dailog.hide();
-                                    };
-                                    document.getElementById("input-dailog-btn-confirm").onclick = (e) => {
-                                        confirm(input.value);
-                                        it.dailog.hide();
-                                    };
-                                };
-                                it.dailog.hide = () => {
-                                    if (div.parentNode == document.body) {
-                                        document.body.removeChild(div);
-                                    }
-                                };
-                            }
-                            it.dailog.show(value.url, (input) => {
-                                km.execCommand("HyperLink", input, value.title);
-                                it.style = "";
-                                it.class = "kity-minder-icon-取消链接";
-                                it.tips = "删除链接";
-                                it.click = (e) => {
-                                    km.execCommand("HyperLink", "", value.title);
-                                };
-                                it.btn.refresh(); // 主动刷一次
-                            });
-                        };
+                        it.style = "display:none;";
                     }
-                }
+                },
             },
             // "spilt": {
             //     class: "kity-minder-icon-分割线",

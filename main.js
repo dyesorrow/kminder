@@ -1,5 +1,5 @@
 // Modules to control application life and create native browser window
-const { app, BrowserWindow, Menu, ipcMain, dialog, globalShortcut } = require('electron');
+const { app, BrowserWindow, Menu, ipcMain, dialog, globalShortcut, shell } = require('electron');
 const path = require('path');
 const fs = require("fs");
 
@@ -22,7 +22,7 @@ app.whenReady().then(() => {
         mainWindow.show(); // 初始化后再显示
     });
     mainWindow.loadFile(path.join(__dirname, "./src/index.html"));
-    
+
     // globalShortcut.register('Alt+I', () => {
     //    mainWindow.webContents.openDevTools();
     // });
@@ -72,6 +72,13 @@ app.whenReady().then(() => {
         if (process.platform !== 'darwin') {
             app.quit();
         }
+    });
+
+
+    // 浏览器中打开链接
+    mainWindow.webContents.on("new-window", (e, url) => {
+        e.preventDefault();
+        shell.openExternal(url);
     });
 
     app.on('activate', function () {
