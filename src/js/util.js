@@ -816,7 +816,7 @@ function addToolbarFeature(km) {
                 inited(it) {
                 },
                 refresh(it) {
-                    
+
                     it.click = (e) => {
                         if (!it.dailog) {
                             // 弹出窗口，然后输入链接
@@ -928,13 +928,29 @@ function addToolbarFeature(km) {
                             it.dailog.show = (value, confirm) => {
                                 document.body.appendChild(div);
                                 let input = document.getElementById("input-dailog-input-area");
-                                input.onkeydown = (e)=>{
-                                    if(e.key == "Enter"){
+
+                                input.addEventListener("paste", (e) => {
+                                    e.stopPropagation();
+                                });
+
+                                input.onkeydown = (e) => {
+                                    if (e.key == "Enter") {
                                         confirm(input.value);
                                         it.dailog.hide();
                                         e.stopPropagation();
                                     }
-                                }
+                                    if (e.ctrlKey) {
+                                        e.stopPropagation(); // 停止minder事件
+                                    }
+                                    let arrow = ["ArrowRight", "ArrowLeft", "ArrowDown", "ArrowUp"];
+                                    for (let i = 0; i < arrow.length; i++) {
+                                        const it = arrow[i];
+                                        if (it == e.key) {
+                                            e.stopPropagation();
+                                            return;
+                                        }
+                                    }
+                                };
                                 input.value = value || "";
                                 document.getElementById("input-dailog-btn-cancel").onclick = (e) => {
                                     it.dailog.hide();
